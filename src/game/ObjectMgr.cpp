@@ -4602,24 +4602,31 @@ void ObjectMgr::LoadPlayerInfo()
 
                 uint32 current_race = fields[0].GetUInt32();
                 uint32 current_class = fields[1].GetUInt32();
-
-                ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(current_race);
-                if (!rEntry || !((1 << (current_race - 1)) & RACEMASK_ALL_PLAYABLE))
-                {
-                    sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong race %u in `playercreateinfo_item` table, ignoring.", current_race);
-                    continue;
-                }
-
-                ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(current_class);
-                if (!cEntry || !((1 << (current_class - 1)) & CLASSMASK_ALL_PLAYABLE))
-                {
-                    sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong class %u in `playercreateinfo_item` table, ignoring.", current_class);
-                    continue;
-                }
-
-                PlayerInfo* pInfo = &m_PlayerInfo[current_race][current_class];
-
                 uint32 item_id = fields[2].GetUInt32();
+                uint32 amount = fields[3].GetUInt32();
+
+                // JerCore- add Wildcard validation:
+                // race = 0  any playable race
+                // class = 0  any playable class
+                if (current_race != 0)
+                {
+                    ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(current_race);
+                    if (!rEntry || !((1 << (current_race - 1)) & RACEMASK_ALL_PLAYABLE))
+                    {
+                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong race %u in `playercreateinfo_item` table, ignoring.", current_race);
+                        continue;
+                    }
+                }
+
+                if (current_class != 0)
+                {
+                    ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(current_class);
+                    if (!cEntry || !((1 << (current_class - 1)) & CLASSMASK_ALL_PLAYABLE))
+                    {
+                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong class %u in `playercreateinfo_item` table, ignoring.", current_class);
+                        continue;
+                    }
+                }
 
                 if (ItemPrototype const* pProto = GetItemPrototype(item_id))
                     pProto->Discovered = true;
@@ -4629,17 +4636,50 @@ void ObjectMgr::LoadPlayerInfo()
                     continue;
                 }
 
-                uint32 amount  = fields[3].GetUInt32();
-
                 if (!amount)
                 {
-                    sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Item id %u (class %u race %u) have amount==0 in `playercreateinfo_item` table, ignoring.", item_id, current_race, current_class);
+                    sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Item id %u (class %u race %u) have amount==0 in `playercreateinfo_item` table, ignoring.", item_id, current_class, current_race);
                     continue;
                 }
 
-                pInfo->item.push_back(PlayerCreateInfoItem(item_id, amount));
+                // JerCore- expand wildcard to all valid playable race/class combinations
+                for (uint32 race = 1; race < MAX_RACES; ++race)
+                {
+                    if (current_race != 0 && race != current_race)
+                        continue;
 
-                ++count;
+                    ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(race);
+                    if (!rEntry || !((1 << (race - 1)) & RACEMASK_ALL_PLAYABLE))
+                        continue;
+
+                    for (uint32 class_ = 1; class_ < MAX_CLASSES; ++class_)
+                    {
+                        if (current_class != 0 && class_ != current_class)
+                            continue;
+
+                        ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(class_);
+                        if (!cEntry || !((1 << (class_ - 1)) & CLASSMASK_ALL_PLAYABLE))
+                            continue;
+
+                        PlayerInfo* pInfo = &m_PlayerInfo[race][class_];
+
+                        bool exists = false;
+                        for (PlayerCreateInfoItems::const_iterator itr = pInfo->item.begin(); itr != pInfo->item.end(); ++itr)
+                        {
+                            if (itr->item_id == item_id && itr->item_amount == amount)
+                            {
+                                exists = true;
+                                break;
+                            }
+                        }
+
+                        if (!exists)
+                        {
+                            pInfo->item.push_back(PlayerCreateInfoItem(item_id, amount));
+                            ++count;
+                        }
+                    }
+                }
             }
             while (result->NextRow());
 
@@ -4675,32 +4715,66 @@ void ObjectMgr::LoadPlayerInfo()
 
                 uint32 current_race = fields[0].GetUInt32();
                 uint32 current_class = fields[1].GetUInt32();
-
-                ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(current_race);
-                if (!rEntry || !((1 << (current_race - 1)) & RACEMASK_ALL_PLAYABLE))
-                {
-                    sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong race %u in `playercreateinfo_spell` table, ignoring.", current_race);
-                    continue;
-                }
-
-                ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(current_class);
-                if (!cEntry || !((1 << (current_class - 1)) & CLASSMASK_ALL_PLAYABLE))
-                {
-                    sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong class %u in `playercreateinfo_spell` table, ignoring.", current_class);
-                    continue;
-                }
-
                 uint32 spell_id = fields[2].GetUInt32();
+
+                // Validate spell first
                 if (!sSpellMgr.GetSpellEntry(spell_id))
                 {
                     sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Non existing spell %u in `playercreateinfo_spell` table, ignoring.", spell_id);
                     continue;
                 }
 
-                PlayerInfo* pInfo = &m_PlayerInfo[current_race][current_class];
-                pInfo->spell.push_back(spell_id);
+                // JerCore- Add wildcard validation:
+                // race = 0   any playable race
+                // class = 0  any playable class
+                if (current_race != 0)
+                {
+                    ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(current_race);
+                    if (!rEntry || !((1 << (current_race - 1)) & RACEMASK_ALL_PLAYABLE))
+                    {
+                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong race %u in `playercreateinfo_spell` table, ignoring.", current_race);
+                        continue;
+                    }
+                }
 
-                ++count;
+                if (current_class != 0)
+                {
+                    ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(current_class);
+                    if (!cEntry || !((1 << (current_class - 1)) & CLASSMASK_ALL_PLAYABLE))
+                    {
+                        sLog.Out(LOG_DBERROR, LOG_LVL_MINIMAL, "Wrong class %u in `playercreateinfo_spell` table, ignoring.", current_class);
+                        continue;
+                    }
+                }
+
+                // JerCore- expand wildcards to all valid playable race/class combinations
+                for (uint32 race = 1; race < MAX_RACES; ++race)
+                {
+                    if (current_race != 0 && race != current_race)
+                        continue;
+
+                    ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(race);
+                    if (!rEntry || !((1 << (race - 1)) & RACEMASK_ALL_PLAYABLE))
+                        continue;
+
+                    for (uint32 class_ = 1; class_ < MAX_CLASSES; ++class_)
+                    {
+                        if (current_class != 0 && class_ != current_class)
+                            continue;
+
+                        ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(class_);
+                        if (!cEntry || !((1 << (class_ - 1)) & CLASSMASK_ALL_PLAYABLE))
+                            continue;
+
+                        PlayerInfo* pInfo = &m_PlayerInfo[race][class_];
+
+                        if (std::find(pInfo->spell.begin(), pInfo->spell.end(), spell_id) == pInfo->spell.end())
+                        {
+                            pInfo->spell.push_back(spell_id);
+                            ++count;
+                        }
+                    }
+                }
             }
             while (result->NextRow());
 
