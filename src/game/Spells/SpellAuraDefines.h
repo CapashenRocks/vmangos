@@ -328,8 +328,17 @@ enum AuraType
     SPELL_AURA_MOD_FACTION_REPUTATION_GAIN = 190,
     SPELL_AURA_USE_NORMAL_MOVEMENT_SPEED = 191,
     // Nostalrius
-    SPELL_AURA_AURA_SPELL = 192, // Ajoute les auras d'un sort tant que cet aura est actif.
-    TOTAL_AURAS=193
+    SPELL_AURA_AURA_SPELL = 192, 
+    SPELL_AURA_UNUSED_193 = 193,
+    SPELL_AURA_UNUSED_194 = 194,
+    SPELL_AURA_UNUSED_195 = 195,
+    SPELL_AURA_UNUSED_196 = 196,
+    SPELL_AURA_UNUSED_197 = 197,
+    SPELL_AURA_UNUSED_198 = 198,
+    SPELL_AURA_UNUSED_199 = 199,
+    // JerCore- XP modifier aura
+    SPELL_AURA_MOD_XP_PCT = 200,
+    TOTAL_AURAS=201
 };
 
 enum AreaAuraType
