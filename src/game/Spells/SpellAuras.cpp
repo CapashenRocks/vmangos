@@ -254,7 +254,18 @@ pAuraHandler AuraHandler[TOTAL_AURAS] =
     &Aura::HandleNoImmediateEffect,                         //190 SPELL_AURA_MOD_FACTION_REPUTATION_GAIN     implemented in Player::CalculateReputationGain
     &Aura::HandleAuraModUseNormalSpeed,                     //191 SPELL_AURA_USE_NORMAL_MOVEMENT_SPEED
     // Nostalrius - custom
-    &Aura::HandleAuraAuraSpell,
+    &Aura::HandleAuraAuraSpell,                             // 192 SPELL_AURA_AURA_SPELL
+    // Dummy handles, for future expansion
+    &Aura::HandleNULL,                                      // 193 SPELL_AURA_UNUSED_193
+    &Aura::HandleNULL,                                      // 194 SPELL_AURA_UNUSED_194
+    &Aura::HandleNULL,                                      // 195 SPELL_AURA_UNUSED_195
+    &Aura::HandleNULL,                                      // 196 SPELL_AURA_UNUSED_196
+    &Aura::HandleNULL,                                      // 197 SPELL_AURA_UNUSED_197
+    &Aura::HandleNULL,                                      // 198 SPELL_AURA_UNUSED_198
+    &Aura::HandleNULL,                                      // 199 SPELL_AURA_UNUSED_199
+    // JerCore- XP Aura, kept at 200 hence need for dummies in the interim (avoids server crashing)
+    &Aura::HandleModXP,                                     // 200 SPELL_AURA_MOD_XP_PCT
+
 };
 
 static AuraType const frozenAuraTypes[] = { SPELL_AURA_MOD_ROOT, SPELL_AURA_MOD_STUN, SPELL_AURA_NONE };
@@ -305,6 +316,18 @@ Aura::Aura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBas
         if (!m_positive)
             holder->CalculateHeartBeat(caster, target);
     }
+}
+
+// JerCore- XP Aura
+void Aura::HandleModXP(bool apply, bool Real)
+{
+    if (!Real)
+        return;
+
+    Unit* target = GetTarget();
+    if (!target || target->GetTypeId() != TYPEID_PLAYER)
+        return;
+
 }
 
 void Aura::Refresh(Unit* caster, Unit* target, SpellAuraHolder* pRefreshWithHolder)
