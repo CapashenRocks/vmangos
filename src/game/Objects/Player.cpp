@@ -3089,11 +3089,20 @@ void Player::GiveXP(uint32 xp, Unit const* victim)
     if (level >= TRIAL_MAX_LEVEL && GetSession()->HasTrialRestrictions())
         return;
 
+    // JerCore- XP Handler for aura 200
+    uint32 oldXp = xp;
+    int32 xpModPct = GetTotalAuraModifier(SPELL_AURA_MOD_XP_PCT);
+
+    if (xpModPct > 0)
+    {
+        xp += uint32((int64(xp) * xpModPct) / 100);
+    }
+
     // XP resting bonus for kill
     uint32 restedBonusXP = victim ? GetXPRestBonus(xp) : 0;
 
     SendLogXPGain(xp, victim, restedBonusXP);
-
+     
     uint32 curXP = GetUInt32Value(PLAYER_XP);
     uint32 nextLvlXP = GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
     uint32 newXP = curXP + xp + restedBonusXP;
@@ -18215,8 +18224,31 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature const
     data << uint32(ERR_TAXIOK);
     GetSession()->SendPacket(&data);
 
-    GetSession()->SendDoFlight(mount_display_id, sourcepath);
+    // JerC0re- Instant Flight Option
+    if (sWorld.getConfig(CONFIG_BOOL_TAXI_INSTANT_FLIGHT))
+    {
 
+        if (nodes.size() > 2)
+            ModifyMoney(-(int32)(totalcost - sourceCost));
+
+        uint32 destNode = nodes.back();
+        TaxiNodesEntry const* dest = sObjectMgr.GetTaxiNodeEntry(destNode);
+        if (!dest)
+        {
+            m_taxi.ClearTaxiDestinations();
+            return false;
+        }
+
+        m_taxi.ClearTaxiDestinations();
+
+        RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+
+        TeleportTo(dest->map_id, dest->x, dest->y, dest->z, GetOrientation());
+        return true;
+    }
+
+    // Normal flight behavior
+    GetSession()->SendDoFlight(mount_display_id, sourcepath);
     return true;
 }
 
