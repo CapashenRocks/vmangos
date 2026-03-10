@@ -325,6 +325,8 @@ class Aura
             // aura not have immediate effect at add/remove and handled by ID in other code place
         }
         void HandleBindSight(bool Apply, bool Real);
+        // JerCore- XP Handler 
+        void HandleModXP(bool apply, bool Real);
         void HandleModPossess(bool Apply, bool Real);
         void HandlePeriodicDamage(bool Apply, bool Real);
         void HandleAuraDummy(bool Apply, bool Real);
