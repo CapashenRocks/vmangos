@@ -914,6 +914,11 @@ PerformanceLog.SlowPacketBroadcast      = 0
 #        Default: 0 (true)
 #                 1 (false)
 #
+#    InstantFlight 
+#        Turn on instant flight (no gryphons).
+#        Default: 0 (off/false)
+#                 1 (on/true)
+#
 #    AlwaysMaxSkillForLevel
 #        Players will automatically gain max level dependent (weapon/defense) skill when logging in, leveling up etc.
 #        Default: 0 (false)
@@ -1130,6 +1135,7 @@ InstantLogout = 1
 ForceLogoutDelay = 0
 AutoHonorRestart = 1
 AllFlightPaths = 0
+InstantFlight = 0
 AlwaysMaxSkillForLevel = 0
 ActivateWeather = 1
 CastUnstuck = 1
